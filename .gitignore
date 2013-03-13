@@ -25,6 +25,7 @@
 *.opensdf
 *.unsuccessfulbuild
 *.vspx
+*.png
 My*/
 ipch/
 obj/

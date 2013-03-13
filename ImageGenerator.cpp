@@ -14,8 +14,6 @@ using namespace std;
 using namespace boost::accumulators;
 using namespace boost::math;
 
-#include <advisor-annotate.h>
-
 #define UNARY 0
 #define BINARY 1
 #define TERMINALVALUE 2
