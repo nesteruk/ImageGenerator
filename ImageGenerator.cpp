@@ -150,7 +150,7 @@ void linspace(float start, float end, int count, float* result)
 inline unsigned char getPixelColor(float value)
 {
   float c = value * 255.0;
-  return (unsigned char) max(0.0f, min(c,255.0f));
+  return (unsigned char) std::max(0.0f, std::min(c,255.0f));
 }
 
 float poly(float x, float* args)
@@ -214,8 +214,8 @@ start:
 
   float *x = new float[w];
   float *y = new float[h];
-  linspace(0,1,w,x);
-  linspace(0,1,h,y);
+  linspace(0.f,1.f,w,x);
+  linspace(0.f,1.f,h,y);
 
   RandomFunction rf(3,depth);
   RandomFunction rf2(3,depth);
