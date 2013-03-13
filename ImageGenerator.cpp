@@ -11,6 +11,7 @@ using namespace std;
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
 #include <boost/bind.hpp>
+#include <boost/tuple/tuple.hpp>
 using namespace boost::accumulators;
 using namespace boost::math;
 
@@ -158,19 +159,21 @@ float poly(float x, float* args)
   return args[0]*x*x + args[1]*x + args[2];
 }
 
-std::tuple<float,float> meanAndSD(float* data, int count)
+boost::tuple<float,float> meanAndSD(float* data, int count)
 {
   accumulator_set<float, stats<tag::mean, tag::variance>> acc;
   for_each(data, data+count, [&](float d) { acc(d); });
   float avg = mean(acc);
   float sd = sqrt(variance(acc));
-  return std::tuple<float,float>(avg,sd);
+  return boost::tuple<float,float>(avg,sd);
 }
 
 void normalizeImageData(float* image, int count)
 {
   auto msd = meanAndSD(image,count);
-  for_each(image, image+count, [=](float& d) { d = 0.5 + (d - std::get<0>(msd)) / (std::get<1>(msd) * 3.0); });
+  for_each(image, image+count, [=](float& d) { 
+    d = 0.5 + (d - msd.get<0>()) / (msd.get<1>() * 3.0); 
+  });
 }
 
 
@@ -208,7 +211,7 @@ start:
 
   float *data = new float[w*h];
   float *rgbData = new float[w*h*3];
-  std::fill_n(rgbData,w*h*3,0.0);
+  std::fill_n(rgbData,w*h*3,0.f);
   unsigned char* imageData = new unsigned char[w*h*3];
   std::fill_n(imageData,w*h*3,0);
 
