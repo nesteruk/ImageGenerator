@@ -15,36 +15,34 @@ using namespace std;
 using namespace boost::accumulators;
 using namespace boost::math;
 
+#include <ppl.h>
+using namespace concurrency;
+
 #define UNARY 0
 #define BINARY 1
 #define TERMINALVALUE 2
 #define TERMINALINDEX 3
 
-#define UNARYCOUNT 8
-#define BINARYCOUNT 5
+#define UNARYCOUNT 3
+#define BINARYCOUNT 3
 
 #define randfloat ((float)rand() / (float)RAND_MAX)
+#define randfloat2 (randfloat * 2.f - 1.f)
+
+#ifndef nullptr
+#define nullptr NULL
+#endif
 
 float Unary(float x, int n)
 {
   switch (n)
   {
   case 0:
-    return sin(2.0f*M_PI*x);
+    return sin(x);
   case 1:
-    return cos(2.0f*M_PI*x);
+    return cos(x);
   case 2:
-    return (exp(x)-1)/(M_E-1);
-  case 3:
-    return sqrt(x);
-  case 4:
-    return x*x;
-  case 5:
-    return abs(x-0.5);
-  case 6:
-    return sqrt(x+1) / M_SQRT2;
-  default:
-    return x;
+    return tanh(x);
   }
 }
 
@@ -53,14 +51,10 @@ float Binary(float x, float y, int n)
   switch (n)
   {
   case 0:
-    return 0.5*(x+y);
+    return x+y;
   case 1:
-    return 0.5*(x-y+1);
+    return x-y;
   case 2:
-    return 0.5*(1+tanh(4*x-2));
-  case 3:
-    return log(x+1);
-  default:
     return x*y;
   }
 }
@@ -78,21 +72,23 @@ public:
     lhs = rhs = NULL;
     if (depth == 0)
     {
-      if (rand() % 50 > 1)
+      if (rand() % 50 > 10)
       {
         index = rand() % count;
         type = TERMINALINDEX;
+        wcout << L"x[" << index << L"]";
       } 
       else
       {
         value = randfloat;
         type = TERMINALVALUE;
+        wcout << value << endl;
       }
     } 
     else 
     {
       int r = rand() % 100;
-      if(r > 50)
+      if(r > 80)
       {
         lhs = new RandomFunction(count, depth-1);
         type = UNARY;
@@ -156,7 +152,7 @@ inline unsigned char getPixelColor(float value)
 
 float poly(float x, float* args)
 {
-  return args[0]*x*x + args[1]*x + args[2];
+  return args[0]*x*x*x + args[1]*x*x + args[2]*x;
 }
 
 boost::tuple<float,float> meanAndSD(float* data, int count)
@@ -165,14 +161,20 @@ boost::tuple<float,float> meanAndSD(float* data, int count)
   for_each(data, data+count, [&](float d) { acc(d); });
   float avg = mean(acc);
   float sd = sqrt(variance(acc));
+  assert(!isnan(avg) && !isinf(avg));
+  assert(!isnan(sd) && !isinf(sd));
   return boost::tuple<float,float>(avg,sd);
 }
 
 void normalizeImageData(float* image, int count)
 {
   auto msd = meanAndSD(image,count);
-  for_each(image, image+count, [=](float& d) { 
-    d = 0.5 + (d - msd.get<0>()) / (msd.get<1>() * 3.0); 
+  const float avg = msd.get<0>();
+  const float sd = msd.get<1>();
+  const float shift = randfloat2;
+
+  parallel_for_each(image, image+count, [=](float& d) { 
+    d = 0.5 + (d - avg) / (sd * (3.0+shift)); 
   });
 }
 
@@ -184,15 +186,16 @@ void normalizeImageData(float* image, int count)
 // cat /proc/cpuinfo
 int main(int argc, char* argv[])
 {
-  srand((unsigned)time(NULL));
+  unsigned seed = (unsigned)time(NULL);
+  srand(seed);
 
   int w, h, depth, iterations;
   if (argc < 3)
   {
-    w = 1024;
-    h = 768;
-    depth = 10;
-    iterations = 3;
+    w = 1920;
+    h = 1080;
+    depth = 8;
+    iterations = 4;
   } 
   else
   {
@@ -204,11 +207,6 @@ int main(int argc, char* argv[])
   }
 
 start:
-
-  float rco[] = { randfloat, randfloat, randfloat };
-  float gco[] = { randfloat, randfloat, randfloat };
-  float bco[] = { randfloat, randfloat, randfloat };
-
   float *data = new float[w*h];
   float *rgbData = new float[w*h*3];
   std::fill_n(rgbData,w*h*3,0.f);
@@ -217,38 +215,76 @@ start:
 
   float *x = new float[w];
   float *y = new float[h];
-  linspace(0.f,1.f,w,x);
-  linspace(0.f,1.f,h,y);
+  linspace(-10.f,10.f,w,x);
+  linspace(-10.f,10.f,h,y);
 
-  RandomFunction rf(3,depth);
-  RandomFunction rf2(3,depth);
-  RandomFunction rf3(3,depth);
+  RandomFunction rf(2,depth);
+
+  #pragma omp parallel for
+  for (int j = 0; j < h; ++j)
+  {
+    wcout << j << endl;
+    for (int i = 0; i < w; ++i)
+    {
+      int n = j*w+i;
+      float xy[] = { x[i], y[j] };
+      data[n] = rf.Eval(xy);
+      assert(!isnan(data[n]) && !isinf(data[n]));
+    }
+  }
+
+  normalizeImageData(data,w*h);
+
+
+  for (int iteration = 0; iteration < iterations; ++iteration)
+  {
+    wcout << L"Iteration " << iteration << endl;
+
+    float rco[] = { randfloat2, randfloat2, randfloat2 };
+    float gco[] = { randfloat2, randfloat2, randfloat2 };
+    float bco[] = { randfloat2, randfloat2, randfloat2 };
+    float weight = 1.0 / (float)(1 << iteration);
+
+    #pragma omp parallel for
+    for (int j = 0; j < h; ++j)
+    {
+      for (int i = 0; i < w; ++i)
+      {
+        int n = j*w+i;
+        int n3 = 3*n;
+        float x = data[n];
+        assert(!isnan(x) && !isinf(x));
+        rgbData[n3] += 2*weight * poly(x, rco);
+        rgbData[n3+1] += weight * poly(x, gco);
+        rgbData[n3+2] += weight * poly(x, bco);
+      }
+    }
+  }
+  
+  //normalizeImageData(rgbData,w*h*3);
 
   #pragma omp parallel for
   for (int j = 0; j < h; ++j)
   {
     for (int i = 0; i < w; ++i)
     {
-      int n = j*w+i;
-      int n3 = 3*n;
-      float xy[] = { x[i], y[j] };
-      rgbData[n3] += rf.Eval(xy);
-      rgbData[n3+1] += rf2.Eval(xy);
-      rgbData[n3+2] += rf3.Eval(xy);
+      for (int k = 0; k < 3; ++k)
+      {
+        int n = 3*(j*w+i)+k;
+        imageData[n] = getPixelColor(rgbData[n]);
+      }
     }
   }
 
-  normalizeImageData(rgbData,w*h*3);
-
-  for (int i = 0; i < w*h*3; ++i)
-    imageData[i] = getPixelColor(rgbData[i]);
-
-  wcout << L"Calculation finished" << endl;
   lodepng_encode24_file("a.png", imageData, w, h);
+  wcout << L"Image rendering complete, seed=" << seed << endl;
 
   delete[] x;
   delete[] y;
   delete[] data;
   delete[] imageData;
   delete[] rgbData;
+
+  getchar();
+  goto start;
 }
