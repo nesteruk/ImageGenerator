@@ -77,7 +77,7 @@ int main(int, char* argv[])
   random_device rd;
 everything:
   //unsigned seed = rd();
-  auto seed = (unsigned)time(nullptr) ^ rd();
+  auto seed = (unsigned)time(nullptr);
   //auto seed = 3584265032;
   srand(seed);
   int depth = 8;
