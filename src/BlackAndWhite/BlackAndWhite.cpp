@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "../RandomFunction.hpp"
 #include "Coloring.h"
+namespace po = boost::program_options;
 
 void linspace(const float start, const float end, 
   const int count, float* result)
@@ -17,7 +18,8 @@ float poly(const float x, const float const* args)
   return x*(args[0] * x + args[1]) + args[2];
 }
 
-void normalizeImage(float *image, const size_t pixelCount)
+// returns true if normalization succeeded and false if it failed
+bool normalizeImage(float *image, const size_t pixelCount)
 {
   vector<float> r(pixelCount);
   vector<float> g(pixelCount);
@@ -46,6 +48,10 @@ void normalizeImage(float *image, const size_t pixelCount)
   cout << "min : " << minR << " " << minG << " " << minB << endl;
   cout << "max : " << maxR << " " << maxG << " " << maxB << endl;
 
+  float all[] = { meanR, meanG, meanB, varR, varG, varB };
+  for (auto x : all)
+    if (std::isnan(x)) return false;
+
   // now transform the image
   for (size_t i = 0; i < pixelCount; i++)
   {
@@ -59,6 +65,7 @@ void normalizeImage(float *image, const size_t pixelCount)
   {
     image[i] *= image[i];
   }*/
+  return true;
 }
 
 inline uint8_t constrain(float x)
@@ -66,26 +73,73 @@ inline uint8_t constrain(float x)
   return fmaxf(0.f, fminf(x, 255.f));
 }
 
-int main(int, char* argv[])
+int main(int ac, char* av[])
 {
   float xmin = -M_PI, xmax = M_PI;
   float ymin = -M_PI, ymax = M_PI;
-  const int w = 720;
-  const int h = 720;
-  const int count = 2; // x and y
-  int imagesToGenerate = 100;
+  int w = 512;
+  int h = 512;
+  int dimensions = 2; // x and y
+  int imagesToGenerate;
+  int iterations;
+  int depth = 10;
   random_device rd;
+  unsigned int seed = rd();
+  int threads;
+
+  po::options_description desc("generator options");
+  desc.add_options()
+    ("help", "show some help")
+    ("n", po::value<int>(&imagesToGenerate)->default_value(1), "number of images to generate")
+    ("i", po::value<int>(&iterations)->default_value(2), "number of iterations")
+    ("d", po::value<int>(), "size of image to generate (w/h)")
+    ("f", po::value<vector<float>>(), "frame (xmin xmax ymin ymax) in which to generate")
+    ("s", po::value<string>(), "rng seed")
+    ("t", po::value<int>(&threads)->default_value(8), "number of threads");
+
+  po::variables_map vm;
+  try
+  {
+    po::store(po::parse_command_line(ac, av, desc, 
+      po::command_line_style::unix_style ^ po::command_line_style::allow_short), vm);
+  } 
+  catch (const std::exception& e)
+  {
+    cout << "Cannot parse command-line arguments: " << e.what() << endl;
+    return 1;
+  }
+  po::notify(vm);
+
+  if (vm.count("d")) w = h = vm["d"].as<int>();
+
+  if (vm.count("t")) omp_set_num_threads(threads);
+
+  if (vm.count("f"))
+  {
+    auto vals = vm["f"].as<vector<float>>();
+    if (vals.size() == 4)
+    {
+      xmin = vals[0];
+      xmax = vals[1];
+      ymin = vals[2];
+      ymax = vals[3];
+    }
+  }
+
+  if (vm.count("help"))
+  {
+    cout << desc << endl;
+    return 1;
+  }
+  
 everything:
-  //unsigned seed = rd();
-  auto seed = (unsigned)time(nullptr);
-  //auto seed = 3584265032;
+  if (vm.count("s")) { seed = boost::lexical_cast<unsigned int>(vm["s"].as<string>()); }
+  else seed = rd();
   srand(seed);
-  int depth = 8;
-  int iterations = 1;
-start:
+
   cout << "Render started with seed " << seed << endl;
-  RandomFunction rf(count, depth);
-regen:
+  RandomFunction rf(dimensions, depth);
+
   float *x = new float[w];
   float *y = new float[h];
   linspace(xmin, xmax, w, x);
@@ -125,10 +179,17 @@ regen:
   };
 
   // normalize intermediate values using chosen algos
-  normalizeImage(intermediate, w*h);
+  if (!normalizeImage(intermediate, w*h))
+  {
+    cout << "Generation failed, re-doing this!" << endl;
+    // if this fails, try again with same params
+    goto everything;
+  }
 
+  #pragma omp parallel for
   for (size_t j = 0; j < h; ++j)
   {
+    #pragma omp parallel for
     for (size_t i = 0; i < w; ++i)
     {
       int k = j*w + i;
@@ -148,48 +209,8 @@ regen:
   delete[] x;
   delete[] y;
   
-  if (--imagesToGenerate <= 0)
-  {
-    cout << "Render complete" << endl;
-
-    cout << "0. Go again" << endl;
-    cout << "1. Change xy scope" << endl;
-    cout << "2. Change depth" << endl;
-    cout << "3. Recolor" << endl;
-    cout << "4. Change iterations" << endl;
-
-    int input;
-    cin >> input;
-
-    if (input == 0)
-    {
-      goto everything;
-    }
-    else if (input == 1)
-    {
-      cout << "Enter xmin xmax ymin ymax" << endl;
-
-      cin >> xmin >> xmax >> ymin >> ymax;
-      goto regen;
-    }
-    else if (input == 2)
-    {
-      cout << "Enter new depth: ";
-      cin >> depth;
-      goto start;
-    }
-    else if (input == 3)
-    {
-      goto regen;
-    }
-    else if (input == 4)
-    {
-      cout << "Enter no. of iterations: ";
-      cin >> iterations;
-      goto regen;
-    }
-  }
-  else goto everything;
+  if (--imagesToGenerate > 0)
+    goto everything;
 
 	return 0;
 }
