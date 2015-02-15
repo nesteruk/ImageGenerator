@@ -6,8 +6,8 @@ typedef function<float(float,float)> binaryFunction;
 inline vector<unaryFunction> initUnaryFunctions()
 {
   vector<unaryFunction> result { sinf, cosf, expf, sinhf, coshf, tanhf };
-  result.push_back([](float x) { return x*x; });
-  result.push_back([](float x) { return x*x*x; });
+  //result.push_back([](float x) { return x*x; });
+  //result.push_back([](float x) { return x*x*x; });
   return result;
 }
 
@@ -39,29 +39,34 @@ inline vector<unaryVectorFunction> initUnaryVectorFunctions()
   vector<unaryVectorFunction> result;
   result.push_back(vssin);
   result.push_back(vscos);
-  result.push_back(vssqrt);
+  result.push_back(vsexp);
+  result.push_back(vssinh);
+  result.push_back(vscosh);
   result.push_back(vstanh);
+
+  //result.push_back(vssqrt);
+  //result.push_back(vstanh);
   return result;
 }
 
 inline vector<binaryVectorFunction> initBinaryVectorFunctions()
 {
   vector<binaryVectorFunction> result;
-  result.push_back([](int* n, float* a, float* b, float* c)
+  result.push_back([](const int* n, float* a, float* b, float* c)
   {
     #pragma omp parallel for
     #pragma simd
     for (int i = 0; i < *n; ++i)
       c[i] = a[i] + b[i];
   });
-  result.push_back([](int* n, float* a, float* b, float* c)
+  result.push_back([](const int* n, float* a, float* b, float* c)
   {
     #pragma omp parallel for
     #pragma simd
     for (int i = 0; i < *n; ++i)
       c[i] = a[i] - b[i];
   });
-  result.push_back([](int* n, float* a, float* b, float* c)
+  result.push_back([](const int* n, float* a, float* b, float* c)
   {
     #pragma omp parallel for
     #pragma simd

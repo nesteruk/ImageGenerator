@@ -50,14 +50,14 @@ bool normalizeImage(float *image, const size_t pixelCount)
 
   float all[] = { meanR, meanG, meanB, varR, varG, varB };
   for (auto x : all)
-    if (std::isnan(x)) return false;
+    if (std::isnan(x) || std::isinf(x)) return false;
 
   // now transform the image
   for (size_t i = 0; i < pixelCount; i++)
   {
-    image[i * 3 + 0] = (image[i * 3 + 0] - meanR) / (varR/3);
-    image[i * 3 + 1] = (image[i * 3 + 1] - meanG) / (varG/3);
-    image[i * 3 + 2] = (image[i * 3 + 2] - meanB) / (varB/3);
+    image[i * 3 + 0] = (image[i * 3 + 0] - meanR) / (rangeR);
+    image[i * 3 + 1] = (image[i * 3 + 1] - meanG) / (rangeG);
+    image[i * 3 + 2] = (image[i * 3 + 2] - meanB) / (rangeB);
   }
 
   // postprocessing, you really feel like it
@@ -73,8 +73,50 @@ inline uint8_t constrain(float x)
   return fmaxf(0.f, fminf(x, 255.f));
 }
 
+// sanity checks
+int main2()
+{
+  constexpr int count = 101;
+  float f[count];
+  linspace(-M_PI, M_PI, count, f);
+  float result[count];
+  vssin(&count, f, result);
+
+  for (size_t i = 0; i < count; i++)
+  {
+    cout << result[i] << "\t";
+  }
+}
+
+int equivalence_check()
+{
+  assert(unaryFunctions.size() == unaryVectorFunctions.size());
+  assert(binaryFunctions.size() == binaryVectorFunctions.size());
+
+  // ensure that scalar and vector random functions are equivalent
+  constexpr int count = 101;
+  float f[count];
+  linspace(-M_PI, M_PI, count, f);
+  float result[count*count], result2[count*count];
+
+  RandomFunction rf(2, 8);
+  rf.Eval(count, count, f, f, result, false);
+  rf.Eval(count, count, f, f, result2, true);
+
+  for (size_t i = 0; i < count; i++)
+  {
+    if (result[i] != result2[i])
+    {
+      cout << "failed at " << i << " difference = " << abs(result[i]-result2[i]) << endl;
+    }
+  }
+
+}
+
 int main(int ac, char* av[])
 {
+  
+
   float xmin = -M_PI, xmax = M_PI;
   float ymin = -M_PI, ymax = M_PI;
   int w = 512;
@@ -82,7 +124,7 @@ int main(int ac, char* av[])
   int dimensions = 2; // x and y
   int imagesToGenerate;
   int iterations;
-  int depth = 10;
+  int depth;
   random_device rd;
   unsigned int seed = rd();
   int threads;
@@ -92,10 +134,11 @@ int main(int ac, char* av[])
     ("help", "show some help")
     ("n", po::value<int>(&imagesToGenerate)->default_value(1), "number of images to generate")
     ("i", po::value<int>(&iterations)->default_value(2), "number of iterations")
-    ("d", po::value<int>(), "size of image to generate (w/h)")
+    ("d", po::value<int>(&depth)->default_value(6), "function depth")
+    ("z", po::value<int>(), "size of image to generate (w/h)")
     ("f", po::value<vector<float>>(), "frame (xmin xmax ymin ymax) in which to generate")
     ("s", po::value<string>(), "rng seed")
-    ("t", po::value<int>(&threads)->default_value(8), "number of threads");
+    ("t", po::value<int>(&threads)->default_value(4), "number of threads");
 
   po::variables_map vm;
   try
@@ -110,7 +153,7 @@ int main(int ac, char* av[])
   }
   po::notify(vm);
 
-  if (vm.count("d")) w = h = vm["d"].as<int>();
+  if (vm.count("z")) w = h = vm["z"].as<int>();
 
   if (vm.count("t")) omp_set_num_threads(threads);
 
@@ -137,8 +180,11 @@ everything:
   else seed = rd();
   srand(seed);
 
-  cout << "Render started with seed " << seed << endl;
-  RandomFunction rf(dimensions, depth);
+sanity:
+  equivalence_check();
+
+  cout << endl << "Render started with seed " << seed << endl;
+  RandomFunction rf(dimensions, depth, true);
 
   float *x = new float[w];
   float *y = new float[h];
@@ -154,15 +200,8 @@ everything:
 
   int it_count = iterations;
   while (it_count --> 0) 
-  {
-    #pragma omp parallel for
-    for (size_t j = 0; j < h; ++j)
-    {
-      for (size_t i = 0; i < w; ++i)
-      {
-        f[j*w + i] = rf.Eval(x[i], y[j]);
-      }
-    }
+  {    
+    rf.Eval(w, h, x, y, f, false);
 
     PolynomialColoring ca(3);
         
