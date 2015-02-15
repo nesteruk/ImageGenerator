@@ -55,9 +55,9 @@ bool normalizeImage(float *image, const size_t pixelCount)
   // now transform the image
   for (size_t i = 0; i < pixelCount; i++)
   {
-    image[i * 3 + 0] = (image[i * 3 + 0] - meanR) / (rangeR);
-    image[i * 3 + 1] = (image[i * 3 + 1] - meanG) / (rangeG);
-    image[i * 3 + 2] = (image[i * 3 + 2] - meanB) / (rangeB);
+    image[i * 3 + 0] = (image[i * 3 + 0] - meanR) / (varR / 3);
+    image[i * 3 + 1] = (image[i * 3 + 1] - meanG) / (varG / 3);
+    image[i * 3 + 2] = (image[i * 3 + 2] - meanB) / (varB / 3);
   }
 
   // postprocessing, you really feel like it
@@ -99,7 +99,7 @@ int equivalence_check()
   linspace(-M_PI, M_PI, count, f);
   float result[count*count], result2[count*count];
 
-  RandomFunction rf(2, 8);
+  RandomFunction rf(2, 8, false);
   rf.Eval(count, count, f, f, result, false);
   rf.Eval(count, count, f, f, result2, true);
 
@@ -181,10 +181,10 @@ everything:
   srand(seed);
 
 sanity:
-  equivalence_check();
+  //equivalence_check();
 
   cout << endl << "Render started with seed " << seed << endl;
-  RandomFunction rf(dimensions, depth, true);
+  RandomFunction rf(dimensions, depth, false);
 
   float *x = new float[w];
   float *y = new float[h];

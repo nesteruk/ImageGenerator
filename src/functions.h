@@ -5,9 +5,10 @@ typedef function<float(float,float)> binaryFunction;
 
 inline vector<unaryFunction> initUnaryFunctions()
 {
-  vector<unaryFunction> result { sinf, cosf, expf, sinhf, coshf, tanhf };
-  //result.push_back([](float x) { return x*x; });
-  //result.push_back([](float x) { return x*x*x; });
+  vector<unaryFunction> result { sinf, cosf /*, expf, sinhf, coshf, tanhf*/ };
+  result.push_back([](float x) { return -x; });
+  result.push_back([](float x) { return x*x; });
+  result.push_back([](float x) { return x*x*x; });
   return result;
 }
 
@@ -17,14 +18,13 @@ inline vector<function<float(float,float)>> initBinaryFunctions()
   result.push_back([](float a, float b) { return a + b; });
   result.push_back([](float a, float b) { return a - b; });
   result.push_back([](float a, float b) { return a * b; });
-
-  /*
-  result.push_back([](float a, float b) { return a / b; });
+    
+  //result.push_back([](float a, float b) { return a / b; });
   result.push_back([](float a, float b) { return sin(a*b); });
   result.push_back([](float a, float b) { return cos(a*b); });
-  result.push_back([](float a, float b) { return powf(a,b); });
-  result.push_back([](float a, float b) { return std::max(a,b); });
-  result.push_back([](float a, float b) { return std::min(a,b); });*/
+  //result.push_back([](float a, float b) { return powf(a,b); });
+  //result.push_back([](float a, float b) { return std::max(a,b); });
+  //result.push_back([](float a, float b) { return std::min(a,b); });
   return result;
 }
 

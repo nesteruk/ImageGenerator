@@ -21,7 +21,7 @@ class RandomFunction
   size_t binaryFunctionCount;
   bool vectorize;
 public:
-  RandomFunction(int count, int depth, bool vectorize = true)
+  RandomFunction(int count, int depth, bool vectorize)
   {
     unaryFunctionCount = vectorize ? unaryVectorFunctions.size() : unaryFunctions.size();
     binaryFunctionCount = vectorize ? binaryVectorFunctions.size() : binaryFunctions.size();
