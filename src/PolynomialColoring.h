@@ -3,11 +3,12 @@
 #include "ColoringAlgorithm.h"
 #include <boost/math/tools/rational.hpp>
 
-struct PolynomialColoring : public ColoringAlgorithm
+struct PolynomialColoring : ColoringAlgorithm
 {
   uint8_t terms;
   float *r, *g, *b;
-  PolynomialColoring(const uint8_t terms) : terms(terms)
+
+  explicit PolynomialColoring(const uint8_t terms) : terms(terms)
   {
     r = new float[terms];
     g = new float[terms];
@@ -20,17 +21,19 @@ struct PolynomialColoring : public ColoringAlgorithm
     }
   }
 
+  
+
+  virtual void Value(const float input, float &r, float &g, float &b) const override
+  {
+    r += tools::evaluate_polynomial(this->r, input, terms);
+    g += tools::evaluate_polynomial(this->g, input, terms);
+    b += tools::evaluate_polynomial(this->b, input, terms);
+  }
+
   virtual ~PolynomialColoring()
   {
     delete[] r;
     delete[] g;
     delete[] b;
-  }
-
-  virtual void Value(float input, float &r, float &g, float &b) override
-  {
-    r += tools::evaluate_polynomial(this->r, input, terms);
-    g += tools::evaluate_polynomial(this->g, input, terms);
-    b += tools::evaluate_polynomial(this->b, input, terms);
   }
 };

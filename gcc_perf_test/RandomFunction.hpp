@@ -141,10 +141,10 @@ public:
     if (vectorize)
       EvalVector(w, h, x, y, result);
     else {
-      //#pragma omp parallel for
+      #pragma omp parallel for
       for (size_t j = 0; j < h; ++j)
       {
-       //#pragma omp parallel for
+        #pragma omp parallel for
         for (size_t i = 0; i < w; ++i)
         {
           result[j*w + i] = Eval(x[i], y[j]);

@@ -26,13 +26,6 @@ freely, subject to the following restrictions:
 #ifndef LODEPNG_H
 #define LODEPNG_H
 
-#include <string.h> /*for size_t*/
-
-#ifdef __cplusplus
-#include <vector>
-#include <string>
-#endif /*__cplusplus*/
-
 /*
 The following #defines are used to create code sections. They can be disabled
 to disable code sections, which can give faster compile time and smaller binary.

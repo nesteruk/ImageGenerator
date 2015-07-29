@@ -9,10 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
     <Filter Include="Coloring">
       <UniqueIdentifier>{0930e3db-8b05-4ba1-a88b-4bffa074a45c}</UniqueIdentifier>
     </Filter>
@@ -21,27 +17,30 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\lodepng\lodepng.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\RandomFunction.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ColoringAlgorithm.h">
       <Filter>Coloring</Filter>
     </ClInclude>
     <ClInclude Include="PolynomialColoring.h">
       <Filter>Coloring</Filter>
     </ClInclude>
+    <ClInclude Include="functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lodepng.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomFunction.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackAndWhite.cpp">
+    <ClCompile Include="lodepng.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\include\lodepng\lodepng.cpp">
+    <ClCompile Include="imagegen.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
