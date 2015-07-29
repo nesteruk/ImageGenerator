@@ -25,7 +25,8 @@ bool normalizeImage(float *image, const size_t pixelCount)
   vector<float> g(pixelCount);
   vector<float> b(pixelCount);
 
-  accumulator_set<float, stats<tag::mean, tag::variance, tag::min, tag::max>> accR, accG, accB;
+  accumulator_set<float, stats<tag::mean, tag::variance,
+          tag::min, tag::max>> accR, accG, accB;
 
   for (size_t i = 0; i < pixelCount; i++)
   {
@@ -204,16 +205,18 @@ image_rendering_options parse_options(int ac, char* av[])
 void render(image_rendering_options& iro) {
   vector<double> renderTimes;
 
-  everything:
+
     //#pragma omp parallel for
     for (int i = 0; i < iro.images_to_generate; ++i) {
+    everything:
       auto seed = iro.seed.is_initialized() ? iro.seed.value() : rd();
+      srand(seed);
 
-      sanity:
-#ifdef USEMKL // does vector routine checks
-  equivalence_check();
-  //return;
-  #endif
+    sanity:
+      #ifdef USEMKL // does vector routine checks
+      equivalence_check();
+      //return;
+      #endif
 
       cout << endl << "Render started with seed " << seed << endl;
       auto start_time = high_resolution_clock::now();
@@ -256,7 +259,7 @@ void render(image_rendering_options& iro) {
       if (!normalizeImage(intermediate, w * h)) {
         cout << "Generation failed, re-doing this!" << endl;
         // if this fails, try again with same params
-        continue;
+        goto everything;
       }
 
       for (size_t j = 0; j < h; ++j) {
@@ -270,7 +273,7 @@ void render(image_rendering_options& iro) {
       }
 
       // send the image over to the recipient
-      auto filename = string(".\\samples\\") + boost::lexical_cast<string>(seed) + ".png";
+      auto filename = string("./samples/") + boost::lexical_cast<string>(seed) + ".png";
       lodepng_encode24_file(filename.c_str(), image, w, h);
 
       delete[] image;
@@ -283,7 +286,6 @@ void render(image_rendering_options& iro) {
       auto duration = duration_cast<milliseconds>(end_time - start_time).count();
       renderTimes.push_back(duration);
       cout << "Render took " << duration << "msec." << endl;
-
     }
 
   // compute average render time

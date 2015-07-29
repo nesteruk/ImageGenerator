@@ -7,6 +7,7 @@ set(Boost_LIBRARY_DIR /cygdrive/c/boost/stage/lib)
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fopenmp -O3")
 
+find_package(OpenMP)
 find_package(Boost 1.56 COMPONENTS program_options REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIR})
